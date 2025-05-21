@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 
 // Suggested initial states
 const initialMessage = ''
@@ -7,70 +7,152 @@ const initialSteps = 0
 const initialIndex = 4 // the index the "B" is at
 
 export default function AppFunctional(props) {
-  // THE FOLLOWING HELPERS ARE JUST RECOMMENDATIONS.
-  // You can delete them and build your own logic from scratch.
+  const [index, setIndex] = useState(initialIndex)
+  const [steps, setSteps] = useState (initialSteps)
+  const [message, setMessage] = useState(initialMessage)
+  const [email, setEmail] = useState(initialEmail)
+
+  useEffect(() => {
+    console.log(`Component mounted`)
+
+    return () => {
+      console.log(`Component unmounted`)
+    }
+  },
+[])
+
+useEffect (() => {
+  console.log(`Index updated to ${index}. Coordinates: ${getXYMessage ()}`)
+}, [index])
+
+useEffect(() =>{
+  console.log(`Steps updated to ${steps}`)
+}, [steps])
 
   function getXY() {
-    // It it not necessary to have a state to track the coordinates.
-    // It's enough to know what index the "B" is at, to be able to calculate them.
+    const x = index % 3
+    const y = Math.floor(index / 3)
+    return {x, y }
   }
 
   function getXYMessage() {
-    // It it not necessary to have a state to track the "Coordinates (2, 2)" message for the user.
-    // You can use the `getXY` helper above to obtain the coordinates, and then `getXYMessage`
-    // returns the fully constructed string.
+    const { x, y } = getXY()
+    return `Coordinates (${x}, ${y})`
   }
 
   function reset() {
-    // Use this helper to reset all states to their initial values.
+    setIndex(initialIndex)
+    setSteps(initialSteps)
+    setMessage(initialMessage)
+  
   }
 
   function getNextIndex(direction) {
-    // This helper takes a direction ("left", "up", etc) and calculates what the next index
-    // of the "B" would be. If the move is impossible because we are at the edge of the grid,
-    // this helper should return the current index unchanged.
+    const { x, y } = getXY()
+
+    let newX = x
+    let newY = y
+
+    switch (direction) {
+      case 'left':
+        newX = Math.max(0, x - 1) // Ensure we don't go below 0
+        break
+      case 'right':
+        newX = Math.min(2, x + 1) // Ensure we don't go above 2
+        break
+      case 'up':
+        newY = Math.max(0, y - 1) // Ensure we don't go below 0
+        break
+      case 'down':
+        newY = Math.min(2, y + 1) // Ensure we don't go above 2
+        break
+      default:
+        break
+    }
+    const newIndex = newY * 3 + newX
+    return newIndex
   }
 
+
   function move(evt) {
-    // This event handler can use the helper above to obtain a new index for the "B",
-    // and change any states accordingly.
+    const direction = evt.target.id
+    
+    const newIndex = getNextIndex(direction)
+
+    if (newIndex !== index) {
+      setIndex(newIndex)
+      setSteps(steps + 1)
+    }
   }
 
   function onChange(evt) {
-    // You will need this to update the value of the input.
+    setEmail(evt.target.value)
   }
 
   function onSubmit(evt) {
-    // Use a POST request to send a payload to the server.
+    evt.preventDefault()
+
+    if (!email || !email.includes('a')) {
+      setMessage(`Please enter a valid email`)
+      return
+    }
+    
+    fetch('https://jsonplaceholder.typicode.com/posts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email,
+        coordinates: getXY(),
+        steps
+      })
+    })
+
+    .then(response => response.json())
+    .then(data => {
+      console.log('Success', data)
+      setMessage ('Form submitted successfully!')
+    })
+    .catch(error => {
+      console.error('Error:', error)
+    setMessage('Error submitting form')
+    
+    })
   }
 
   return (
     <div id="wrapper" className={props.className}>
       <div className="info">
-        <h3 id="coordinates">Coordinates (2, 2)</h3>
-        <h3 id="steps">You moved 0 times</h3>
+        <h3 id="coordinates">{getXYMessage()})</h3>
+        <h3 id="steps">You moved {steps} times</h3>
       </div>
       <div id="grid">
         {
           [0, 1, 2, 3, 4, 5, 6, 7, 8].map(idx => (
-            <div key={idx} className={`square${idx === 4 ? ' active' : ''}`}>
-              {idx === 4 ? 'B' : null}
+            <div key={idx} className={`square${idx === index ? ' active' : ''}`}>
+              {idx === index ? 'B' : null}
             </div>
           ))
         }
       </div>
       <div className="info">
-        <h3 id="message"></h3>
+        <h3 id="message">{message}</h3>
       </div>
       <div id="keypad">
-        <button id="left">LEFT</button>
-        <button id="up">UP</button>
-        <button id="right">RIGHT</button>
-        <button id="down">DOWN</button>
-        <button id="reset">reset</button>
+        <button id="left" onClick={move}>LEFT</button>
+        <button id="up" onClick={move}>UP</button>
+        <button id="right" onClick={move} >RIGHT</button>
+        <button id="down" onClick={move}>DOWN</button>
+        <button id="reset" onClick={reset}>reset</button>
       </div>
-      <form>
-        <input id="email" type="email" placeholder="type email"></input>
+      <form onSubmit={onSubmit}>
+        <input 
+        id="email" 
+        type="email" 
+        placeholder="type email"
+        value={email}
+        onChange={onChange}></input>
         <input id="submit" type="submit"></input>
       </form>
     </div>
